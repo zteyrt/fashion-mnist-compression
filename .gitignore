@@ -1,0 +1,53 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# =========================
+# Virtual environments and secrets
+# =========================
+.venv/
+venv/
+.env
+.env.*
+
+# Allow example environment configuration files
+!.env.example
+
+# =========================
+# IDE and local tool configurations
+# =========================
+.idea/
+.vscode/
+
+.claude/
+.trae/
+
+# =========================
+# Dataset and model checkpoints
+# =========================
+data/
+checkpoints/
+*.pth
+*.pt
+*.onnx
+
+# =========================
+# Generated result images
+# Keep CSV experiment data for GitHub
+# =========================
+results/*.png
+results/*.jpg
+results/*.jpeg
+results/*.svg
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
