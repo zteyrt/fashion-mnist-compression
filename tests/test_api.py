@@ -205,3 +205,51 @@ def test_invalid_image():
     )
 
     assert response.status_code == 400
+
+# ==========================================
+# 7. 测试上传空文件
+# ==========================================
+
+def test_empty_image():
+
+    response = client.post(
+        "/predict",
+        data={"model_name": "baseline"},
+        files={
+            "file": (
+                "empty.png",
+                b"",
+                "image/png"
+            )
+        }
+    )
+
+    assert response.status_code == 400
+
+    assert response.json()["detail"] == "上传的图片为空"
+
+
+# ==========================================
+# 8. 测试上传超过 5MB 的图片
+# ==========================================
+
+def test_oversized_image():
+
+    # 生成一个超过 5MB 的模拟文件
+    oversized_content = b"x" * (5 * 1024 * 1024 + 1)
+
+    response = client.post(
+        "/predict",
+        data={"model_name": "baseline"},
+        files={
+            "file": (
+                "large.png",
+                oversized_content,
+                "image/png"
+            )
+        }
+    )
+
+    assert response.status_code == 413
+
+    assert response.json()["detail"] == "图片大小不能超过 5MB"
