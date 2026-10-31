@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Fashion-MNIST AI 服饰识别系统</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <main class="container">
+
+        <!-- 1. 网页标题 -->
+        <header>
+            <h1>Fashion-MNIST AI 服饰识别系统</h1>
+
+            <p class="subtitle">
+                基于 PyTorch CNN 和 FastAPI 的服饰图片分类与模型压缩分析应用
+            </p>
+        </header>
+
+
+        <!-- 2. 模型选择 -->
+        <section>
+            <h2>选择识别模型</h2>
+
+            <select id="modelSelect">
+                <option value="baseline">
+                    原始 CNN（206,922 参数）
+                </option>
+
+                <option value="pruned1">
+                    第一次剪枝并微调（205,730 参数）
+                </option>
+
+                <option value="pruned2">
+                    第二次剪枝并微调（154,682 参数）
+                </option>
+            </select>
+        </section>
+
+
+        <!-- 3. 上传图片 -->
+        <section>
+            <h2>上传图片</h2>
+
+            <input
+                type="file"
+                id="imageInput"
+                accept="image/png,image/jpeg"
+            >
+
+            <div class="button-group">
+                <button id="predictButton" type="button">
+                    开始识别
+                </button>
+
+                <button id="compareButton" type="button">
+                    同时对比三个模型
+                </button>
+            </div>
+        </section>
+
+
+        <!-- 4. 图片预览 -->
+        <section id="previewContainer" hidden>
+            <h2 class="center-title">图片预览</h2>
+
+            <div class="preview-box">
+                <img
+                    id="imagePreview"
+                    alt="待识别的服饰图片"
+                >
+            </div>
+        </section>
+
+
+        <!-- 5. 单模型识别结果 -->
+        <section>
+            <h2>识别结果</h2>
+
+            <div id="result" class="result-box">
+                请先上传一张图片
+            </div>
+        </section>
+
+
+        <!-- 6. 十类别概率图 -->
+        <section>
+            <h2>各类别预测概率</h2>
+
+            <div id="probabilityChart">
+                请先上传图片并点击开始识别
+            </div>
+        </section>
+
+
+        <!-- 7. 三模型同时对比 -->
+        <section>
+            <h2>三个模型的对比结果</h2>
+
+            <div id="comparisonResults">
+                请上传图片并点击“同时对比三个模型”
+            </div>
+        </section>
+
+
+        <!-- 8. 模型压缩效果分析 -->
+        <section>
+            <h2>模型压缩效果分析</h2>
+
+            <div id="compressionAnalysis">
+
+                <p class="analysis-note">
+                    以下数据来自此前的 Fashion-MNIST 测试集实验，
+                    与当前上传的单张图片预测置信度不同。
+                </p>
+
+                <h3>测试集准确率对比</h3>
+
+                <div id="accuracyChart"></div>
+
+                <h3>模型参数量对比</h3>
+
+                <div id="parameterChart"></div>
+
+                <p class="analysis-note">
+                    第二次剪枝模型相对原始 CNN 减少约 25.25% 的参数，
+                    测试集准确率由 90.47% 变为 90.90%。
+                </p>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 9. 加载 JavaScript -->
+    <script src="/static/script.js"></script>
+
+</body>
+</html>
+

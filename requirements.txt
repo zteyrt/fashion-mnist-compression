@@ -3,3 +3,7 @@ torchvision
 numpy
 matplotlib
 pandas
+fastapi
+uvicorn
+python-multipart
+pillow
