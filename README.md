@@ -377,25 +377,56 @@ python -m pip install -r requirements.txt
 
 建议参考 [PyTorch 官方安装说明](https://pytorch.org/get-started/locally/) 选择适合本机的版本。
 
-## 11. 模型权重说明
 
-Web 推理服务启动时需要三个模型权重文件：
+## 11. 模型权重下载与使用
+
+本项目已在 GitHub Releases 发布三个训练好的 CNN 模型权重。
+
+**下载地址：**
+
+[Download pretrained models — v1.0.0](https://github.com/zteyrt/fashion-mnist-compression/releases/tag/v1.0.0)
+
+### 11.1 模型权重列表
+
+| 模型 | 权重文件 | 测试准确率 |
+|---|---|---:|
+| 原始 CNN | `fashion_cnn_baseline.pth` | 90.47% |
+| 第一次剪枝并微调 | `fashion_cnn_pruned_12ch_finetuned.pth` | 90.86% |
+| 第二次剪枝并微调 | `fashion_cnn_pruned_12_24ch_finetuned.pth` | 90.90% |
+
+### 11.2 下载方法
+
+1. 打开上方 GitHub Releases 链接。
+2. 在 **Assets** 区域下载三个 `.pth` 文件。
+3. 将三个权重文件放在项目根目录。
+
+目录结构如下：
 
 ```text
-fashion_cnn_baseline.pth
-fashion_cnn_pruned_12ch_finetuned.pth
-fashion_cnn_pruned_12_24ch_finetuned.pth
+fashion-mnist-compression/
+├── fashion_cnn_baseline.pth
+├── fashion_cnn_pruned_12ch_finetuned.pth
+├── fashion_cnn_pruned_12_24ch_finetuned.pth
+├── src/
+├── web/
+├── requirements.txt
+└── README.md
 ```
 
-这三个文件应放在项目根目录。
+### 11.3 模型加载验证
 
-**注意：当前 GitHub 仓库未包含 `.pth` 模型权重文件。**
+下载权重并放好后，在项目根目录执行：
 
-因此，仅克隆仓库并安装依赖还不足以直接启动 Web 推理服务。
+```bash
+python -m src.test_load_three_models
+```
 
-需要先按照项目中的训练、剪枝和微调流程生成相应权重，或者在拥有这些权重文件的本地实验环境中运行。
+如果三个模型都显示加载成功，并且推理输出形状均为 `torch.Size([1, 10])`，说明权重文件可以正常使用。
 
-运行前还需要确保各脚本使用的模型路径和文件名与上述要求一致。
+之后可按照第 12 节的说明启动 Web 应用。
+
+**注意：** 模型权重通过 GitHub Releases 提供，不直接保存在 Git 仓库中。
+
 
 ## 12. 启动 Web 应用
 
