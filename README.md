@@ -282,7 +282,7 @@ pruned2 = FashionCNN(12, 24)
 
 保存并提交截图后，可取消下面这一行的注释，展示完整页面：
 
-<!-- ![Fashion-MNIST Web Dashboard](assets/web_dashboard.png) -->
+![Fashion-MNIST Web Dashboard](assets/web_dashboard.png)
 
 ### 8.3 Web 运行效果示例
 
