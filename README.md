@@ -1,5 +1,5 @@
 # Fashion-MNIST CNN Structured Pruning
-
+[![Python Tests](https://github.com/zteyrt/fashion-mnist-compression/actions/workflows/tests.yml/badge.svg)](https://github.com/zteyrt/fashion-mnist-compression/actions/workflows/tests.yml)
 基于 PyTorch 的 Fashion-MNIST 卷积神经网络结构化剪枝与 Web 可视化项目。
 
 本项目从 CNN 模型训练出发，通过卷积通道重要性评估、两阶段结构化剪枝和微调，研究模型压缩对分类准确率、参数量、计算量及实际推理性能的影响。
