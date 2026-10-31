@@ -21,7 +21,7 @@ from src.model import FashionCNN
 
 
 # ==========================================
-# 1. 项目路径
+# 1. 项目路径配置
 # ==========================================
 
 current_dir = Path(__file__).resolve().parent
@@ -42,7 +42,7 @@ print("当前运行设备:", device)
 
 
 # ==========================================
-# 3. 配置三个 CNN 模型
+# 3. 三个 CNN 模型的配置
 # ==========================================
 
 model_configs = {
@@ -70,7 +70,7 @@ model_configs = {
 
 
 # ==========================================
-# 4. 加载三个模型
+# 4. 加载三个 CNN 模型
 # ==========================================
 
 models = {}
@@ -79,33 +79,35 @@ print("\n========== 正在加载 CNN 模型 ==========")
 
 for model_name, config in model_configs.items():
 
-    # 获取权重路径
+    # 模型权重文件的完整路径
     weight_path = project_root / config["filename"]
 
-    # 检查权重文件
+    # 检查模型权重是否存在
     if not weight_path.exists():
         raise FileNotFoundError(
             f"模型权重文件不存在: {weight_path}"
         )
 
-    # 创建对应的 CNN 结构
+    # 根据通道数创建对应 CNN 结构
     model = FashionCNN(
         conv1_channels=config["conv1"],
         conv2_channels=config["conv2"]
     ).to(device)
 
-    # 读取权重
+    # 读取模型参数
     state_dict = torch.load(
         weight_path,
         map_location=device,
         weights_only=True
     )
 
-    # 加载权重并进入推理模式
+    # 加载训练好的参数
     model.load_state_dict(state_dict)
+
+    # 设置为推理模式
     model.eval()
 
-    # 保存已加载的模型
+    # 加入模型字典
     models[model_name] = model
 
     print(
@@ -118,7 +120,7 @@ print("====================================\n")
 
 
 # ==========================================
-# 5. 定义 Fashion-MNIST 类别
+# 5. Fashion-MNIST 十个类别
 # ==========================================
 
 class_names = [
@@ -136,10 +138,12 @@ class_names = [
 
 
 # ==========================================
-# 6. 图片预处理
+# 6. 图片预处理配置
 # ==========================================
 
 transform = transforms.ToTensor()
+
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 # ==========================================
@@ -148,13 +152,13 @@ transform = transforms.ToTensor()
 
 app = FastAPI(
     title="Fashion-MNIST CNN Classification API",
-    description="支持原始 CNN 和结构化剪枝 CNN 的服饰分类接口",
+    description="支持原始 CNN 和两阶段结构化剪枝 CNN 的服饰分类接口",
     version="2.0.0"
 )
 
 
 # ==========================================
-# 8. 提供静态网页文件
+# 8. 挂载静态文件
 # ==========================================
 
 app.mount(
@@ -163,6 +167,10 @@ app.mount(
     name="static"
 )
 
+
+# ==========================================
+# 9. Web 页面
+# ==========================================
 
 @app.get("/web")
 def web_page():
@@ -173,7 +181,7 @@ def web_page():
 
 
 # ==========================================
-# 9. API 首页
+# 10. API 首页
 # ==========================================
 
 @app.get("/")
@@ -187,7 +195,7 @@ def home():
 
 
 # ==========================================
-# 10. 健康检查接口
+# 11. 健康检查
 # ==========================================
 
 @app.get("/health")
@@ -202,7 +210,7 @@ def health():
 
 
 # ==========================================
-# 11. 获取模型列表接口
+# 12. 获取模型列表
 # ==========================================
 
 @app.get("/models")
@@ -222,19 +230,89 @@ def get_models():
 
 
 # ==========================================
-# 12. 图片预测接口
+# 13. 公共函数：读取并预处理上传图片
 # ==========================================
 
-@app.post("/predict")
-async def predict(
-    file: UploadFile = File(...),
-    model_name: str = Form("baseline")
-):
+async def preprocess_uploaded_image(file: UploadFile):
 
-    # ======================================
-    # 12.1 检查模型名称
-    # ======================================
+    # --------------------------------------
+    # 13.1 读取文件内容
+    # --------------------------------------
 
+    try:
+        contents = await file.read()
+    finally:
+        await file.close()
+
+    # --------------------------------------
+    # 13.2 检查文件是否为空
+    # --------------------------------------
+
+    if not contents:
+        raise HTTPException(
+            status_code=400,
+            detail="上传的图片为空"
+        )
+
+    # --------------------------------------
+    # 13.3 检查文件大小
+    # --------------------------------------
+
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="图片大小不能超过 5MB"
+        )
+
+    # --------------------------------------
+    # 13.4 验证并转换图片
+    # --------------------------------------
+
+    try:
+
+        with Image.open(io.BytesIO(contents)) as image:
+
+            # 检查图片真实格式
+            if image.format not in ("PNG", "JPEG"):
+                raise HTTPException(
+                    status_code=400,
+                    detail="仅支持 PNG 或 JPG 图片"
+                )
+
+            # 转换为单通道灰度图
+            image = image.convert("L")
+
+            # 调整为 Fashion-MNIST 输入尺寸
+            image = image.resize(
+                (28, 28),
+                Image.Resampling.LANCZOS
+            )
+
+            # 转换为 PyTorch Tensor
+            input_tensor = transform(image)
+
+            # [1, 28, 28] -> [1, 1, 28, 28]
+            input_tensor = input_tensor.unsqueeze(0)
+
+            # 移动到 CPU 或 CUDA
+            input_tensor = input_tensor.to(device)
+
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(
+            status_code=400,
+            detail="无法识别图片文件"
+        )
+
+    return input_tensor
+
+
+# ==========================================
+# 14. 公共函数：单个模型推理
+# ==========================================
+
+def run_model_inference(model_name, input_tensor):
+
+    # 检查模型名称
     if model_name not in models:
         raise HTTPException(
             status_code=400,
@@ -244,71 +322,11 @@ async def predict(
             )
         )
 
-    # 选择对应模型
     selected_model = models[model_name]
 
-    # ======================================
-    # 12.2 读取上传文件
-    # ======================================
-
-    try:
-        contents = await file.read()
-    finally:
-        await file.close()
-
-    if not contents:
-        raise HTTPException(
-            status_code=400,
-            detail="上传的图片为空"
-        )
-
-    # 限制文件大小为 5MB
-    if len(contents) > 5 * 1024 * 1024:
-        raise HTTPException(
-            status_code=413,
-            detail="图片大小不能超过 5MB"
-        )
-
-    # ======================================
-    # 12.3 读取和转换图片
-    # ======================================
-
-    try:
-        with Image.open(io.BytesIO(contents)) as image:
-
-            if image.format not in ("PNG", "JPEG"):
-                raise HTTPException(
-                    status_code=400,
-                    detail="仅支持 PNG 或 JPG 图片"
-                )
-
-            # 转换为灰度图
-            image = image.convert("L")
-
-            # 调整图片尺寸
-            image = image.resize(
-                (28, 28),
-                Image.Resampling.LANCZOS
-            )
-
-    except (UnidentifiedImageError, OSError, ValueError):
-        raise HTTPException(
-            status_code=400,
-            detail="无法识别图片文件"
-        )
-
-    # ======================================
-    # 12.4 图片转换为 Tensor
-    # ======================================
-
-    input_tensor = transform(image)
-
-    # [1,28,28] -> [1,1,28,28]
-    input_tensor = input_tensor.unsqueeze(0).to(device)
-
-    # ======================================
-    # 12.5 模型推理
-    # ======================================
+    # --------------------------------------
+    # 14.1 模型预测
+    # --------------------------------------
 
     with torch.inference_mode():
 
@@ -324,15 +342,18 @@ async def predict(
             dim=0
         )
 
-    # ======================================
-    # 12.6 获取预测结果
-    # ======================================
+    # --------------------------------------
+    # 14.2 处理预测结果
+    # --------------------------------------
 
     predicted_index = predicted_idx.item()
 
     predicted_class = class_names[predicted_index]
 
-    confidence_percent = confidence.item() * 100
+    confidence_percent = round(
+        confidence.item() * 100,
+        2
+    )
 
     all_probabilities = {
         class_names[i]: round(
@@ -342,132 +363,98 @@ async def predict(
         for i in range(len(class_names))
     }
 
-    # ======================================
-    # 12.7 返回 JSON
-    # ======================================
+    # 统计模型参数量
+    total_params = sum(
+        parameter.numel()
+        for parameter in selected_model.parameters()
+    )
+
+    # --------------------------------------
+    # 14.3 返回模型预测数据
+    # --------------------------------------
 
     return {
-        "filename": file.filename,
         "model_name": model_name,
         "model_display_name": model_configs[model_name]["display_name"],
         "predicted_class": predicted_class,
         "class_index": predicted_index,
-        "confidence": round(confidence_percent, 2),
-        "device": str(device),
+        "confidence": confidence_percent,
+        "parameters": total_params,
         "probabilities": all_probabilities
     }
 
 
 # ==========================================
-# 13. 本地启动入口
+# 15. 单模型预测接口
 # ==========================================
+
+@app.post("/predict")
+async def predict(
+    file: UploadFile = File(...),
+    model_name: str = Form("baseline")
+):
+
+    # 先检查模型名称
+    if model_name not in models:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "无效的模型名称。"
+                "可选值: baseline, pruned1, pruned2"
+            )
+        )
+
+    # 使用公共函数预处理图片
+    input_tensor = await preprocess_uploaded_image(file)
+
+    # 使用指定模型预测
+    prediction = run_model_inference(
+        model_name,
+        input_tensor
+    )
+
+    # 保留原来的 API 返回格式
+    return {
+        "filename": file.filename,
+        **prediction,
+        "device": str(device)
+    }
 
 
 # ==========================================
-# 13. 三模型同时对比接口
+# 16. 三模型同时对比接口
 # ==========================================
 
 @app.post("/compare")
-async def compare_models(file: UploadFile = File(...)):
+async def compare_models(
+    file: UploadFile = File(...)
+):
 
-    # 1. 读取上传的图片
-    try:
-        contents = await file.read()
-    finally:
-        await file.close()
+    # 只需要预处理一次图片
+    input_tensor = await preprocess_uploaded_image(file)
 
-    # 检查文件是否为空
-    if not contents:
-        raise HTTPException(
-            status_code=400,
-            detail="上传的图片为空"
-        )
-
-    # 限制图片最大为 5MB
-    if len(contents) > 5 * 1024 * 1024:
-        raise HTTPException(
-            status_code=413,
-            detail="图片大小不能超过 5MB"
-        )
-
-    # 2. 图片预处理
-    try:
-        with Image.open(io.BytesIO(contents)) as image:
-
-            if image.format not in ("PNG", "JPEG"):
-                raise HTTPException(
-                    status_code=400,
-                    detail="仅支持 PNG 或 JPG 图片"
-                )
-
-            image = image.convert("L")
-
-            image = image.resize(
-                (28, 28),
-                Image.Resampling.LANCZOS
-            )
-
-            input_tensor = transform(image).unsqueeze(0).to(device)
-
-    except (UnidentifiedImageError, OSError, ValueError):
-        raise HTTPException(
-            status_code=400,
-            detail="无法识别图片文件"
-        )
-
-    # 3. 存储三个模型的预测结果
     comparison_results = []
 
-    # 4. 依次调用三个模型
-    with torch.inference_mode():
+    # 依次对三个模型进行推理
+    for model_name in models.keys():
 
-        for model_name, model in models.items():
+        prediction = run_model_inference(
+            model_name,
+            input_tensor
+        )
 
-            # 模型推理
-            outputs = model(input_tensor)
+        comparison_results.append(prediction)
 
-            # 转换为概率
-            probabilities = torch.softmax(
-                outputs,
-                dim=1
-            )[0]
-
-            # 找到概率最高的类别
-            confidence, predicted_idx = torch.max(
-                probabilities,
-                dim=0
-            )
-
-            predicted_index = predicted_idx.item()
-
-            # 统计模型参数量
-            total_params = sum(
-                p.numel()
-                for p in model.parameters()
-            )
-
-            # 记录每个模型的结果
-            comparison_results.append({
-                "model_name": model_name,
-                "model_display_name": model_configs[model_name]["display_name"],
-                "predicted_class": class_names[predicted_index],
-                "confidence": round(confidence.item() * 100, 2),
-                "parameters": total_params,
-                "probabilities": {
-                    class_names[i]: round(
-                        probabilities[i].item() * 100,
-                        2
-                    )
-                    for i in range(len(class_names))
-                }
-            })
-
-    # 5. 返回三个模型的结果
     return {
         "filename": file.filename,
         "device": str(device),
         "results": comparison_results
     }
+
+
+# ==========================================
+# 17. 本地启动入口
+# ==========================================
 
 if __name__ == "__main__":
 
